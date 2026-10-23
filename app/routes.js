@@ -1,4 +1,4 @@
-module.exports = function(app, passport, db) {
+module.exports = function(app, passport, db, ObjectID) {
 
 // normal routes ===============================================================
 
@@ -11,6 +11,7 @@ module.exports = function(app, passport, db) {
     app.get('/profile', isLoggedIn, function(req, res) {
         db.collection('messages').find().toArray((err, result) => {
           if (err) return console.log(err)
+            console.log(result)
           res.render('profile.ejs', {
             user : req.user,
             messages: result
@@ -36,10 +37,11 @@ module.exports = function(app, passport, db) {
       })
     })
 
-    app.put('/messages', (req, res) => {
+    app.put('/likes', (req, res) => {
+      console.log(req.body)
       db.collection('messages')
-      .findOneAndUpdate({name: req.body.name, msg: req.body.msg}, {
-        $set: {
+      .findOneAndUpdate({_id: new ObjectID(req.body.messageID)}, {
+        $set: { //this is a mongodb operator that acts on a 'field' (aka the Key)
           thumbUp:req.body.thumbUp + 1
         }
       }, {
@@ -51,8 +53,23 @@ module.exports = function(app, passport, db) {
       })
     })
 
+    app.put('/dislikes', (req, res) => {
+      db.collection('messages')
+      .findOneAndUpdate({_id: new ObjectID(req.body.messageID)}, {
+          $set: {
+            thumbUp: req.body.thumbUp - 1
+          }
+      }, {
+        sort: {_id: -1},
+        upsert: true
+      }, (err, result) => {
+        if (err) return res.send(err)
+        res.send(result)
+      })
+    })
+
     app.delete('/messages', (req, res) => {
-      db.collection('messages').findOneAndDelete({name: req.body.name, msg: req.body.msg}, (err, result) => {
+      db.collection('messages').findOneAndDelete({_id: new ObjectID(req.body.messageID)}, (err, result) => {
         if (err) return res.send(500, err)
         res.send('Message deleted!')
       })
@@ -115,3 +132,13 @@ function isLoggedIn(req, res, next) {
 
     res.redirect('/');
 }
+
+
+
+
+
+
+
+
+
+
